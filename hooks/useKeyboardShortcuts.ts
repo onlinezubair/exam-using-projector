@@ -1,0 +1,83 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useExamStore } from '@/store/examStore';
+import { useFullscreen } from './useFullscreen';
+import { usePrintBackup } from './usePrintBackup';
+
+// Source: the global keydown listener (mcq-projector_v8.html L1991-2007),
+// gated there by `if (!screens.show.classList.contains('active')) return;`.
+// In the port, SlideshowScreen only renders while screen === 'show' (see
+// ExamApp.tsx), so mounting this hook only inside SlideshowScreen achieves
+// the same scoping without re-checking `screen` on every keystroke.
+//
+// Space unconditionally calls togglePause(), matching source's
+// `$('pauseBtn').click()` -- the pause button's click handler has no
+// calibrating guard in source, even though the button itself isn't
+// rendered during calibration. Harmless: there's no timer running yet to
+// pause.
+//
+// Confirmed against source directly (not just the plan doc): Escape has
+// NO fullscreen-aware double-press behavior. It always calls
+// endExamToSetup() directly, with no check of document.fullscreenElement
+// first. This intentionally implements that simple version.
+export function useKeyboardShortcuts() {
+  const goNextSlide = useExamStore((s) => s.goNextSlide);
+  const goPrevSlide = useExamStore((s) => s.goPrevSlide);
+  const adjustFont = useExamStore((s) => s.adjustFont);
+  const adjustPerSlide = useExamStore((s) => s.adjustPerSlide);
+  const togglePause = useExamStore((s) => s.togglePause);
+  const endExamToSetup = useExamStore((s) => s.endExamToSetup);
+  const { toggleFullscreen } = useFullscreen();
+  const triggerPrint = usePrintBackup();
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePause();
+      }
+      if (e.code === 'ArrowRight') {
+        goNextSlide();
+      }
+      if (e.code === 'ArrowLeft') {
+        goPrevSlide();
+      }
+      // Zoom in/out -- adjust once at the start of projection and it holds
+      // for the whole exam.
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        adjustFont(2);
+      }
+      if (e.key === '-') {
+        e.preventDefault();
+        adjustFont(-2);
+      }
+      // Questions per screen, live, clamped 2-5.
+      if (e.key === ']') {
+        e.preventDefault();
+        adjustPerSlide(1);
+      }
+      if (e.key === '[') {
+        e.preventDefault();
+        adjustPerSlide(-1);
+      }
+      // Emergency / high-value shortcuts.
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+      if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        triggerPrint();
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        endExamToSetup();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [goNextSlide, goPrevSlide, adjustFont, adjustPerSlide, togglePause, endExamToSetup, toggleFullscreen, triggerPrint]);
+}

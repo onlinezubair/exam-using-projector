@@ -1,0 +1,92 @@
+'use client';
+import { useState } from 'react';
+import { useExamStore } from '@/store/examStore';
+import { usePrintBackup } from '@/hooks/usePrintBackup';
+import { buildExportZip } from '@/lib/zip';
+import { buildMetaFileBase } from '@/lib/meta';
+import { getSetLabel } from '@/lib/shuffle';
+import styles from './EndScreen.module.css';
+
+export function EndScreen() {
+  const { sets, masterQuestions, config, meta, endExamToSetup } = useExamStore();
+  const [showKey, setShowKey] = useState(false);
+  const triggerPrint = usePrintBackup();
+
+  const hasAnswers = masterQuestions.some(q => q.answer);
+  const maxQuestions = Math.max(...sets.map(s => s.length), 0);
+
+  const handleExport = () => {
+    if (!hasAnswers) {
+      if (!confirm("No answer markers were found in the question bank, so the answer-key CSV will have blank answers. Export anyway?")) {
+        return;
+        }
+    }
+    const zipData = buildExportZip(sets, masterQuestions, config, meta);
+    const blob = new Blob([zipData as unknown as BlobPart], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${buildMetaFileBase(meta)}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className={styles.container}>
+      <h1>Test complete</h1>
+      <p>Please collect answer sheets now.</p>
+      
+      <div className={styles.actions}>
+        <button onClick={() => setShowKey(!showKey)} className={styles.btnPrimary}>
+          {showKey ? 'Hide answer key' : 'Show answer key (teacher only)'}
+        </button>
+        <button onClick={handleExport} className={styles.btnPrimary}>
+          Export question papers + answer key (.zip)
+        </button>
+        <button onClick={triggerPrint} className={styles.btnPrimary}>
+          Print question sets
+        </button>
+      </div>
+
+      {showKey && (
+        <div className={styles.keyArea}>
+          {!hasAnswers ? (
+            <p className={styles.noKey}>No answer markers (e.g., *A or Answer: A) were found in the question bank, so no key was generated.</p>
+          ) : (
+            <table className={styles.keyTable}>
+              <thead>
+                <tr>
+                  <th>Position</th>
+                  {sets.map((_, idx) => <th key={idx}>Set {getSetLabel(idx)} — Bank Q# / Answer</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: maxQuestions }).map((_, i) => (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    {sets.map((set, setIdx) => {
+                      const q = set[i];
+                      return <td key={setIdx}>{q ? `Q${q.origNumber} → ${q.answer || '—'}` : '—'}</td>;
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      <div className={styles.backWrapper}>
+        <button onClick={endExamToSetup} className={styles.btnSecondary}>
+          Back to setup
+        </button>
+      </div>
+
+      <footer className={styles.branding}>
+        Dr. Muhammad Zubair · Iqra University, H-9, Islamabad · onlinezubair@gmail.com
+      </footer>
+    </div>
+  );
+}

@@ -1,0 +1,42 @@
+'use client';
+import { useExamStore } from '@/store/examStore';
+import { ResumeBanner } from './ResumeBanner';
+import { PrintArea } from './PrintArea';
+import { EndScreen } from './screens/EndScreen/EndScreen';
+import { MetaScreen } from './screens/MetaScreen/MetaScreen';
+import { SetupScreen } from './screens/SetupScreen/SetupScreen';
+import { SlideshowScreen } from './screens/SlideshowScreen/SlideshowScreen';
+
+export function ExamApp() {
+  const screen = useExamStore((s) => s.screen);
+
+  let screenSwitch;
+  switch (screen) {
+    case 'meta':
+      screenSwitch = <MetaScreen />;
+      break;
+    case 'setup':
+      screenSwitch = (
+        <>
+          <SetupScreen />
+          <ResumeBanner />
+        </>
+      );
+      break;
+    case 'show':
+      screenSwitch = <SlideshowScreen />;
+      break;
+    case 'end':
+      screenSwitch = <EndScreen />;
+      break;
+    default:
+      screenSwitch = <div>Unknown screen</div>;
+  }
+
+  return (
+    <>
+      {screenSwitch}
+      <PrintArea />
+    </>
+  );
+}

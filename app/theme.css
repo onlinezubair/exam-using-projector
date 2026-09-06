@@ -1,0 +1,11 @@
+:root {
+  --board: #1f3329;
+  --board-dark: #16241d;
+  --chalk: #f4f1e6;
+  --chalk-dim: #cfd0c4;
+  --accent: #f2c94c;
+  --accent-dim: #d9a441;
+  --danger: #e2665a;
+  --ok: #7fbf7f;
+  --rule: rgba(244,241,230,0.18);
+}
